@@ -120,7 +120,7 @@ class statsbestvouchers extends ModuleGrid
     public function getData()
     {
         $currency = new Currency((int) Configuration::get('PS_CURRENCY_DEFAULT'));
-        $this->query = 'SELECT SQL_CALC_FOUND_ROWS cr.code, ocr.name, COUNT(ocr.id_cart_rule) as total, ROUND(SUM(o.total_paid_real) / o.conversion_rate,2) as ca
+        $this->query = 'SELECT SQL_CALC_FOUND_ROWS MAX(cr.code) AS code, MAX(ocr.name) AS name, COUNT(ocr.id_cart_rule) as total, ROUND(SUM(o.total_paid_real / o.conversion_rate),2) as ca
 				FROM ' . _DB_PREFIX_ . 'order_cart_rule ocr
 				LEFT JOIN ' . _DB_PREFIX_ . 'orders o ON o.id_order = ocr.id_order
 				LEFT JOIN ' . _DB_PREFIX_ . 'cart_rule cr ON cr.id_cart_rule = ocr.id_cart_rule
@@ -129,7 +129,7 @@ class statsbestvouchers extends ModuleGrid
 					AND o.invoice_date BETWEEN ' . $this->getDate() . '
 				GROUP BY ocr.id_cart_rule';
 
-        if (Validate::IsName($this->_sort)) {
+        if (!empty($this->_sort) && Validate::IsName($this->_sort)) {
             $this->query .= ' ORDER BY `' . bqSQL($this->_sort) . '`';
             if (isset($this->_direction) && (Tools::strtoupper($this->_direction) == 'ASC' || Tools::strtoupper($this->_direction) == 'DESC')) {
                 $this->query .= ' ' . pSQL($this->_direction);
