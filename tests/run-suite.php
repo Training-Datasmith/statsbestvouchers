@@ -116,6 +116,24 @@ exec($cmd . ' 2>&1', $output, $code);
 $joined = implode("\n", $output);
 echo $joined . "\n";
 
+$stripAnsi = function ($line) {
+    return preg_replace('/\x1b\[[0-9;]*m/', '', $line);
+};
+
+$diagnosticPattern = '/(Notice:|Warning:|Deprecated:|Strict Standards:|Parse error:|Fatal error:|Catchable fatal error:)/';
+$okLinePattern = '/^OK \(' . $expectedTestCount . ' tests, \d+ assertions\)$/';
+
+foreach ($output as $line) {
+    $plain = trim($stripAnsi($line));
+    if ($plain === '') {
+        continue;
+    }
+    if (preg_match($diagnosticPattern, $plain)) {
+        fwrite(STDERR, "PHPUnit output contained a PHP diagnostic: $plain\n");
+        exit(1);
+    }
+}
+
 $badMarkers = array('FAILURES', 'ERRORS', 'Skipped:', 'Incomplete:', 'Risky:', 'There were warnings');
 foreach ($badMarkers as $marker) {
     if (strpos($joined, $marker) !== false) {
@@ -124,8 +142,17 @@ foreach ($badMarkers as $marker) {
     }
 }
 
-if (!preg_match('/OK \(' . $expectedTestCount . ' tests, \d+ assertions\)/', $joined)) {
-    fwrite(STDERR, "Expected OK ($expectedTestCount tests, N assertions) summary\n");
+$foundOkLine = false;
+foreach ($output as $line) {
+    $plain = trim($stripAnsi($line));
+    if (preg_match($okLinePattern, $plain)) {
+        $foundOkLine = true;
+        break;
+    }
+}
+
+if (!$foundOkLine) {
+    fwrite(STDERR, "Expected exact OK ($expectedTestCount tests, N assertions) summary line\n");
     exit($code !== 0 ? $code : 1);
 }
 
